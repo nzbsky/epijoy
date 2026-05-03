@@ -1,1 +1,826 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EpiJoy — Telegram бот для Епіленду</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --card: #13132a;
+    --yellow: #ffe54c;
+    --pink: #ff4caf;
+    --cyan: #4cefff;
+    --purple: #b84cff;
+    --green: #4cffb8;
+    --orange: #ff824c;
+    --text: #f0eeff;
+    --muted: #7a7aaa;
+  }
 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    padding: 2rem;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    animation: float 8s ease-in-out infinite;
+  }
+  .blob-1 { width: 500px; height: 500px; background: var(--purple); top: -150px; left: -150px; animation-delay: 0s; }
+  .blob-2 { width: 400px; height: 400px; background: var(--pink); bottom: -100px; right: -100px; animation-delay: 2s; }
+  .blob-3 { width: 300px; height: 300px; background: var(--cyan); top: 40%; left: 50%; transform: translate(-50%,-50%); animation-delay: 4s; }
+  .blob-4 { width: 250px; height: 250px; background: var(--yellow); bottom: 20%; left: 10%; animation-delay: 1s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-30px) scale(1.05); }
+  }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 100px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    color: var(--cyan);
+    letter-spacing: 0.05em;
+    margin-bottom: 2rem;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .badge-dot {
+    width: 8px; height: 8px;
+    background: var(--cyan);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .hero-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 8rem);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    animation: fadeDown 0.8s 0.1s ease both;
+  }
+
+  .hero-title span.yellow { color: var(--yellow); }
+  .hero-title span.pink { color: var(--pink); }
+
+  .hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+    color: var(--muted);
+    margin-top: 1.5rem;
+    max-width: 500px;
+    line-height: 1.6;
+    animation: fadeDown 0.8s 0.2s ease both;
+  }
+
+  .hero-sub strong { color: var(--text); }
+
+  .hero-cta {
+    margin-top: 2.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeDown 0.8s 0.3s ease both;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 2rem;
+    border-radius: 100px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--yellow);
+    color: #0d0d1a;
+    box-shadow: 0 0 30px rgba(255,229,76,0.35);
+  }
+
+  .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 0 50px rgba(255,229,76,0.5); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .btn-outline:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.5); }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    animation: fadeDown 0.8s 0.6s ease both;
+    z-index: 1;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--muted), transparent);
+    animation: scrollDown 1.5s ease-in-out infinite;
+  }
+
+  @keyframes scrollDown {
+    0% { opacity: 0; transform: scaleY(0); transform-origin: top; }
+    50% { opacity: 1; transform: scaleY(1); }
+    100% { opacity: 0; transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION SHARED ── */
+  section { padding: 6rem 1.5rem; }
+
+  .section-label {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--pink);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── ABOUT BOT ── */
+  .about {
+    background: linear-gradient(135deg, #0f0f22 0%, #130d20 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .about::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(184,76,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+
+  .features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-top: 2rem;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.5rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .feature-item:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .feature-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+  }
+
+  .feature-text h4 {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+  }
+
+  .feature-text p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* phone mockup */
+  .phone-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  .phone {
+    width: 260px;
+    background: #1a1a35;
+    border-radius: 36px;
+    border: 3px solid rgba(255,255,255,0.1);
+    padding: 1.5rem 1rem;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.1);
+    animation: phoneFloat 4s ease-in-out infinite;
+    position: relative;
+  }
+
+  @keyframes phoneFloat {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-15px) rotate(-2deg); }
+  }
+
+  .phone::before {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 30px;
+    background: radial-gradient(ellipse, rgba(184,76,255,0.3) 0%, transparent 70%);
+    filter: blur(10px);
+  }
+
+  .phone-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 1rem;
+  }
+
+  .tg-avatar {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #4cefff, #b84cff);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  .tg-name { font-weight: 700; font-size: 0.9rem; }
+  .tg-status { font-size: 0.7rem; color: var(--green); }
+
+  .chat-bubble {
+    padding: 0.7rem 1rem;
+    border-radius: 16px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    margin-bottom: 0.7rem;
+    max-width: 85%;
+    animation: bubbleIn 0.4s ease both;
+  }
+
+  .bubble-in {
+    background: #252548;
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .bubble-out {
+    background: linear-gradient(135deg, #b84cff, #4cefff);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+    color: #0d0d1a;
+    font-weight: 700;
+  }
+
+  .tg-btn {
+    display: block;
+    width: 100%;
+    background: rgba(76,239,255,0.12);
+    border: 1px solid rgba(76,239,255,0.3);
+    color: var(--cyan);
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .phone-glow {
+    position: absolute;
+    inset: -40px;
+    background: radial-gradient(ellipse at center, rgba(184,76,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* ── TEAM ── */
+  .team {
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .team::before {
+    content: '';
+    position: absolute;
+    bottom: -100px;
+    left: -100px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(76,239,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .team-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .member-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 24px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  .member-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: inherit;
+  }
+
+  .member-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.15); }
+  .member-card:hover::before { opacity: 0.04; }
+  .member-card:hover .member-avatar { transform: scale(1.1); }
+
+  .member-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin: 0 auto 1.2rem;
+    transition: transform 0.3s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .member-name {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+  }
+
+  .member-role {
+    display: inline-block;
+    padding: 0.3rem 0.9rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+  }
+
+  .member-number {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.15);
+    font-weight: 900;
+    z-index: 1;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: #07070f;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+  }
+
+  .footer-sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+  }
+
+  .footer-hearts {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .heart { color: var(--pink); animation: heartbeat 1.5s ease-in-out infinite; }
+
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+    margin: 0 auto;
+    max-width: 600px;
+  }
+
+  /* ── COUNTERS STRIP ── */
+  .strip {
+    background: #0f0f22;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 2.5rem 1.5rem;
+    overflow: hidden;
+  }
+
+  .strip-inner {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+    padding: 1rem 2rem;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-number {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── SCROLL ANIMATIONS ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+  .reveal-delay-5 { transition-delay: 0.5s; }
+</style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="blob blob-4"></div>
+  </div>
+  <div class="hero-content">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Telegram Bot · Епіленд
+    </div>
+    <h1 class="hero-title">
+      <span class="yellow">Epi</span><span class="pink">Joy</span>
+    </h1>
+    <p class="hero-sub">
+      Ми створюємо <strong>Telegram-бот</strong> для дитячого<br>розважального центру <strong>Епіленд</strong>
+    </p>
+    <div class="hero-cta">
+      <a href="#team" class="btn btn-primary">🎉 Наша команда</a>
+      <a href="#bot" class="btn btn-outline">Про бот →</a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ── STRIP ── -->
+<div class="strip">
+  <div class="strip-inner">
+    <div class="stat reveal">
+      <div class="stat-number" style="color:var(--yellow)">5</div>
+      <div class="stat-label">Учасників</div>
+    </div>
+    <div class="stat reveal reveal-delay-1">
+      <div class="stat-number" style="color:var(--pink)">1</div>
+      <div class="stat-label">Продукт</div>
+    </div>
+    <div class="stat reveal reveal-delay-2">
+      <div class="stat-number" style="color:var(--cyan)">∞</div>
+      <div class="stat-label">Можливостей</div>
+    </div>
+    <div class="stat reveal reveal-delay-3">
+      <div class="stat-number" style="color:var(--green)">🤖</div>
+      <div class="stat-label">Telegram Bot</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ABOUT ── -->
+<section class="about" id="bot">
+  <div class="container">
+    <div class="about-grid">
+      <div class="reveal">
+        <div class="section-label">Про продукт</div>
+        <h2 class="section-title">Розумний бот для розваг</h2>
+        <p style="color:var(--muted);line-height:1.7;margin-bottom:2rem;">
+          EpiJoy розробляє Telegram-бот, який допомагає відвідувачам <strong style="color:var(--text)">Епіленду</strong> — дитячого розважального центру — зручно взаємодіяти з його послугами прямо у месенджері.
+        </p>
+        <div class="features-list">
+          <div class="feature-item">
+            <div class="feature-icon">🎟️</div>
+            <div class="feature-text">
+              <h4>Бронювання та квитки</h4>
+              <p>Швидке оформлення візиту без черг і дзвінків</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📅</div>
+            <div class="feature-text">
+              <h4>Розклад та події</h4>
+              <p>Актуальна інформація про програми та заходи</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🎁</div>
+            <div class="feature-text">
+              <h4>Акції та бонуси</h4>
+              <p>Персональні пропозиції для постійних гостей</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- phone mockup -->
+      <div class="phone-wrap reveal reveal-delay-2">
+        <div class="phone-glow"></div>
+        <div class="phone">
+          <div class="phone-header">
+            <div class="tg-avatar">🎡</div>
+            <div>
+              <div class="tg-name">EpiJoy Bot</div>
+              <div class="tg-status">● онлайн</div>
+            </div>
+          </div>
+          <div class="chat-bubble bubble-in">
+            Привіт! Я бот Епіленду 🎉<br>Чим можу допомогти?
+          </div>
+          <div class="chat-bubble bubble-out">Хочу забронювати місце!</div>
+          <div class="chat-bubble bubble-in">
+            Чудово! Оберіть дату та кількість дітей 👇
+          </div>
+          <button class="tg-btn">📅 Обрати дату</button>
+          <button class="tg-btn" style="margin-top:0.4rem;border-color:rgba(255,229,76,0.3);color:var(--yellow);background:rgba(255,229,76,0.08);">🎁 Акції</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TEAM ── -->
+<section class="team" id="team">
+  <div class="container">
+    <div class="team-header reveal">
+      <div class="section-label">Команда</div>
+      <h2 class="section-title">Люди за проєктом</h2>
+      <p style="color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6">
+        П'ятеро однодумців, кожен із своєю роллю — разом ми EpiJoy 🚀
+      </p>
+    </div>
+
+    <div class="team-grid">
+
+      <!-- Назар - Координатор -->
+      <div class="member-card reveal" style="--accent:rgba(255,229,76,0.3)">
+        <div class="member-number">01</div>
+        <div class="member-avatar" style="background:linear-gradient(135deg,#ffe54c,#ff824c)">Н</div>
+        <div class="member-name">Подобівський<br>Назар</div>
+        <span class="member-role" style="background:rgba(255,229,76,0.12);color:var(--yellow)">🧭 Координатор</span>
+      </div>
+
+      <!-- Артур - Дизайнер -->
+      <div class="member-card reveal reveal-delay-1" style="--accent:rgba(255,76,175,0.3)">
+        <div class="member-number">02</div>
+        <div class="member-avatar" style="background:linear-gradient(135deg,#ff4caf,#b84cff)">А</div>
+        <div class="member-name">Черепок<br>Артур</div>
+        <span class="member-role" style="background:rgba(255,76,175,0.12);color:var(--pink)">🎨 Дизайнер</span>
+      </div>
+
+      <!-- Роман - Розробник -->
+      <div class="member-card reveal reveal-delay-2" style="--accent:rgba(76,239,255,0.3)">
+        <div class="member-number">03</div>
+        <div class="member-avatar" style="background:linear-gradient(135deg,#4cefff,#4cffb8)">Р</div>
+        <div class="member-name">Дяченко<br>Роман</div>
+        <span class="member-role" style="background:rgba(76,239,255,0.12);color:var(--cyan)">💻 Розробник</span>
+      </div>
+
+      <!-- Анна - Бізнес аналітик -->
+      <div class="member-card reveal reveal-delay-3" style="--accent:rgba(76,255,184,0.3)">
+        <div class="member-number">04</div>
+        <div class="member-avatar" style="background:linear-gradient(135deg,#4cffb8,#4cefff)">А</div>
+        <div class="member-name">Чорна<br>Анна</div>
+        <span class="member-role" style="background:rgba(76,255,184,0.12);color:var(--green)">📊 Бізнес-аналітик</span>
+      </div>
+
+      <!-- Юра - Спікер -->
+      <div class="member-card reveal reveal-delay-4" style="--accent:rgba(184,76,255,0.3)">
+        <div class="member-number">05</div>
+        <div class="member-avatar" style="background:linear-gradient(135deg,#b84cff,#ff4caf)">Ю</div>
+        <div class="member-name">Трухачов<br>Юра</div>
+        <span class="member-role" style="background:rgba(184,76,255,0.12);color:var(--purple)">🎤 Спікер</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">
+    <span style="color:var(--yellow)">Epi</span><span style="color:var(--pink)">Joy</span>
+  </div>
+  <p class="footer-sub">Telegram-бот для дитячого розважального центру Епіленд</p>
+  <div class="divider" style="margin-top:2rem;"></div>
+  <div class="footer-hearts">
+    Зроблено з <span class="heart">♥</span> командою EpiJoy
+  </div>
+</footer>
+
+<script>
+  // scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>
